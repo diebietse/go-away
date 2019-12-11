@@ -47,6 +47,7 @@ func mockFire(m *mockInterface) *Firealert {
 		ctx:   context.Background(),
 		msg:   m,
 		store: m,
+		lvl:   LevelWarning,
 	}
 }
 

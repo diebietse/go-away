@@ -15,7 +15,8 @@ const FirebaseTopic = "alert"
 type AlertLevel int
 
 const (
-	LevelDebug = iota
+	LevelUnknown = AlertLevel(iota)
+	LevelDebug
 	LevelInfo
 	LevelWarning
 	LevelError
@@ -31,7 +32,8 @@ var AlertStrings = map[AlertLevel]string{
 type AlertState int
 
 const (
-	StateResolved = iota + 1
+	StateUnknown = AlertState(iota)
+	StateResolved
 	StateTriggered
 )
 
@@ -39,6 +41,7 @@ type Firealert struct {
 	ctx   context.Context
 	msg   messenger
 	store storage
+	lvl   AlertLevel
 }
 
 type Alert struct {
@@ -50,7 +53,7 @@ type Alert struct {
 	State AlertState `json:"-"`
 }
 
-func New(configPath string) (*Firealert, error) {
+func New(configPath string, lvl AlertLevel) (*Firealert, error) {
 	ctx := context.Background()
 	opt := option.WithCredentialsFile(configPath)
 	app, err := firebase.NewApp(ctx, nil, opt)
@@ -72,6 +75,7 @@ func New(configPath string) (*Firealert, error) {
 		ctx:   ctx,
 		msg:   msg,
 		store: store,
+		lvl:   lvl,
 	}, nil
 }
 
@@ -101,7 +105,7 @@ func (f *Firealert) handleStore(ctx context.Context, alert Alert) error {
 }
 
 func (f *Firealert) handleMessage(ctx context.Context, alert Alert) error {
-	if alert.Level < LevelWarning {
+	if alert.Level < f.lvl {
 		return nil
 	}
 	if alert.State != StateTriggered {
