@@ -1,70 +1,58 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
+	"context"
 	"net/http"
-	"os"
-	"strings"
+	"time"
 
-	"github.com/prometheus/alertmanager/template"
+	"github.com/diebietse/go-away/alertapi"
+	"github.com/diebietse/go-away/firealert"
+	"github.com/diebietse/go-away/utils"
+	flags "github.com/jessevdk/go-flags"
+	log "github.com/sirupsen/logrus"
+
+	"golang.org/x/time/rate"
 )
 
+type Config struct {
+	ListenAddress  string  `short:"a" long:"listen-address" description:"Listen address of the API server" value-name:"LISTEN_ADDRESS"`
+	BurstLimit     int     `short:"b" long:"burst-limit" description:"Burst limit for the API server" value-name:"BURST_LIMIT"`
+	RateLimit      float64 `short:"r" long:"rate-limit" description:"Rate limit for the API server" value-name:"RATE_LIMIT"`
+	TimeoutSeconds int     `short:"t" long:"timeout-seconds" description:"Timeout in seconds to google API" value-name:"TIMEOUTS"`
+	GoogleCreds    string  `short:"g" long:"google-creds" description:"The file with the google credentials" value-name:"GOOGLE_CREDS"`
+	Level          string  `short:"l" long:"report-level" description:"Alert level to cause popup notification" value-name:"REPORT_LEVEL"`
+}
+
 func main() {
-	http.HandleFunc("/healthz", healthz)
-	http.HandleFunc("/webhook", webhook)
-
-	listenAddress := ":8035"
-	if os.Getenv("PORT") != "" {
-		listenAddress = ":" + os.Getenv("PORT")
-	}
-
-	log.Printf("listening on: %v", listenAddress)
-	log.Fatal(http.ListenAndServe(listenAddress, nil))
-}
-
-type responseJSON struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-}
-
-func asJson(w http.ResponseWriter, status int, message string) {
-	data := responseJSON{
-		Status:  status,
-		Message: message,
-	}
-	bytes, _ := json.Marshal(data)
-	json := string(bytes[:])
-
-	w.WriteHeader(status)
-	fmt.Fprint(w, json)
-}
-
-func webhook(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	data := template.Data{}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		asJson(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	log.Printf("Alerts: GroupLabels=%v, CommonLabels=%v", data.GroupLabels, data.CommonLabels)
-	for _, alert := range data.Alerts {
-		log.Printf("Alert: status=%s,Labels=%v,Annotations=%v", alert.Status, alert.Labels, alert.Annotations)
-		severity := alert.Labels["severity"]
-		switch strings.ToUpper(severity) {
-		case "CRITICAL":
-			log.Printf("Critical: %v", alert)
-		case "WARNING":
-			log.Printf("Warming: %v", alert)
-		case "PAGE":
-		default:
-			log.Printf("no action on severity: %s", severity)
+	c := Config{}
+	if _, err := flags.Parse(&c); err != nil {
+		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
+			return
+		} else {
+			log.Fatalf("Could not parse arguments: %v", err)
 		}
 	}
-	asJson(w, http.StatusOK, "success")
-}
+	api := alertapi.New(rate.Limit(c.RateLimit), c.BurstLimit, c.TimeoutSeconds)
+	alert, err := firealert.New(c.GoogleCreds, firealert.AlertLevel(1))
+	if err != nil {
+		log.Fatalf("Could not start firebase: %v", err)
+	}
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+	go func() {
+		for a := range api.Alerts() {
+			alrt, err := utils.AlertExtract(a)
+			if err != nil {
+				log.Errorf("Could not parse alert: %+v", err)
+				continue
+			}
+			if err = alert.SendAlert(ctx, *alrt); err != nil {
+				log.Errorf("Could not send alert: %+v", err)
+			}
+		}
+	}()
 
-func healthz(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Ok!")
+	log.Printf("listening on: %v", c.ListenAddress)
+	log.Fatal(http.ListenAndServe(c.ListenAddress, api))
 }
