@@ -47,10 +47,14 @@ github.com/googleapis/gax-go/v2
 github.com/gorilla/mux
 # github.com/hashicorp/golang-lru v0.5.3
 github.com/hashicorp/golang-lru/simplelru
+# github.com/jessevdk/go-flags v0.0.0-20180331124232-1c38ed7ad0cc
+github.com/jessevdk/go-flags
 # github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+github.com/konsorten/go-windows-terminal-sequences
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/pmezard/go-difflib v1.0.0
@@ -77,6 +81,8 @@ github.com/shurcooL/httpfs/union
 github.com/shurcooL/httpfs/vfsutil
 # github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd
 github.com/shurcooL/vfsgen
+# github.com/sirupsen/logrus v1.2.0
+github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.3.0
 github.com/stretchr/testify/assert
 # go.opencensus.io v0.22.0
@@ -97,6 +103,8 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
+# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20190829153037-c13cbed26979
 golang.org/x/exp/apidiff
 golang.org/x/exp/cmd/apidiff
@@ -126,6 +134,8 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+# golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+golang.org/x/time/rate
 # golang.org/x/tools v0.0.0-20190911174233-4f2ddba30aff
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
